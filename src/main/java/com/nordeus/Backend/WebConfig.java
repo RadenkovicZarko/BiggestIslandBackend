@@ -8,9 +8,9 @@ public class WebConfig implements WebMvcConfigurer {
 
   @Override
   public void addCorsMappings(CorsRegistry registry) {
-    registry.addMapping("/**") // Allow CORS on all endpoints
-      .allowedOrigins("http://localhost:3000") // Allow your React frontend
-      .allowedMethods("GET", "POST", "PUT", "DELETE") // Allow necessary methods
-      .allowCredentials(true);
+    registry.addMapping("/**")
+      .allowedOrigins("https://your-netlify-app-url.com") // Replace with your actual Netlify URL
+      .allowedMethods("GET", "POST", "PUT", "DELETE")
+      .allowedHeaders("*");
   }
 }

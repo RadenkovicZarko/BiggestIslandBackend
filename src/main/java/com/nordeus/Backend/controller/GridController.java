@@ -10,11 +10,11 @@ import java.util.Queue;
 
 @RestController
 @RequestMapping("/grid")
+@CrossOrigin(origins = "https://your-netlify-app-url.com")
 public class GridController {
 
   private final String EXTERNAL_API_URL = "https://jobfair.nordeus.com/jf24-fullstack-challenge/test";
 
-  @CrossOrigin(origins = "http://localhost:3000")
   @GetMapping("")
   public TwoMatricesResponse  getGridData() {
     RestTemplate restTemplate = new RestTemplate();
