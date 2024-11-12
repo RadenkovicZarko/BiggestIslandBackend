@@ -1,4 +1,5 @@
 package com.nordeus.Backend.controller;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -13,14 +14,88 @@ public class GridController {
 
   private final String EXTERNAL_API_URL = "https://jobfair.nordeus.com/jf24-fullstack-challenge/test";
 
+  @CrossOrigin(origins = "http://localhost:3000")
   @GetMapping("")
   public TwoMatricesResponse  getGridData() {
     RestTemplate restTemplate = new RestTemplate();
     String response = restTemplate.getForObject(EXTERNAL_API_URL, String.class);
     int[][] matrixGrid1 = parseGridData(response);
-    double[][] matrixGrid2 = makeAverageGridMatrix(matrixGrid1);
-    TwoMatricesResponse tmr = new TwoMatricesResponse(matrixGrid1,matrixGrid2);
-    return tmr;
+
+
+
+    return getAverage(matrixGrid1);
+  }
+
+
+  private TwoMatricesResponse getAverage(int [][] matrix1)
+  {
+    double[][] matrix2 = new double[30][30];
+    int[][] visited = new int[30][30];
+    for (int i = 0; i < 30; i++) {
+      for (int j = 0; j < 30; j++) {
+        visited[i][j] = 0;
+      }
+    }
+    double max=0;
+    for (int i = 0; i < 30; i++) {
+      for (int j = 0; j < 30; j++) {
+        if (matrix1[i][j] > 0 && visited[i][j]==0) {
+          double average = calculateIslandAverageAndSetValue(i, j, matrix1,matrix2, visited);
+          if(average > max)
+            max = average;
+        }
+      }
+    }
+
+    return new TwoMatricesResponse(matrix1,matrix2,max);
+  }
+
+  double calculateIslandAverageAndSetValue(int x, int y, int[][] matrix1, double[][] matrix2, int[][] visited) {
+    Queue<Pair<Integer, Integer>> queue = new LinkedList<>();
+    queue.add(new Pair<>(x, y));
+    visited[x][y] = 1;
+
+    double sum = 0;
+    int count = 0;
+    int[][] directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
+
+    while (!queue.isEmpty()) {
+      Pair<Integer, Integer> p = queue.poll();
+      sum += matrix1[p.first][p.second];
+      count++;
+
+      for (int[] dir : directions) {
+        int nx = p.first + dir[0];
+        int ny = p.second + dir[1];
+
+        if (nx >= 0 && nx < 30 && ny >= 0 && ny < 30 && matrix1[nx][ny] > 0 && visited[nx][ny] == 0) {
+          queue.add(new Pair<>(nx, ny));
+          visited[nx][ny] = 1;
+        }
+      }
+    }
+
+    double average = sum / count;
+
+    queue.add(new Pair<>(x, y));
+    visited[x][y] = 2;
+
+    while (!queue.isEmpty()) {
+      Pair<Integer, Integer> p = queue.poll();
+      matrix2[p.first][p.second] = average;
+
+      for (int[] dir : directions) {
+        int nx = p.first + dir[0];
+        int ny = p.second + dir[1];
+
+        if (nx >= 0 && nx < 30 && ny >= 0 && ny < 30 && matrix1[nx][ny] > 0 && visited[nx][ny] == 1) {
+          queue.add(new Pair<>(nx, ny));
+          visited[nx][ny] = 2;
+        }
+      }
+    }
+
+    return average;
   }
 
 
@@ -37,112 +112,16 @@ public class GridController {
     return grid;
   }
 
-  private double[][] makeAverageGridMatrix(int[][] matrixGrid)
-  {
-    double[][] averageGridMatrix = new double[30][30];
-    int[][] visitedMatrix = new int[30][30];
-
-    for (int i = 0; i < visitedMatrix.length; i++) {
-      for (int j = 0; j < visitedMatrix[i].length; j++) {
-        visitedMatrix[i][j] = 0;
-      }
-    }
-
-    for(int i=0;i<30;i++)
-    {
-      for(int j=0;j<30;j++)
-      {
-        if(visitedMatrix[i][j]==0 && matrixGrid[i][j]!=0)
-        {
-            setAverage(i,j,matrixGrid,visitedMatrix,averageGridMatrix);
-        }
-      }
-    }
-    return averageGridMatrix;
-  }
-
-
-  void setAverage(int x, int y, int[][] matrix,int [][]visitedMatrix,double[][] averageGridMatrix)
-  {
-    Queue<Pair<Integer,Integer>> queue = new LinkedList<>();
-    queue.add(new Pair<>(x,y));
-    double sum = 0;
-    int cnt = 0;
-    while(!queue.isEmpty())
-    {
-      Queue<Pair<Integer,Integer>> pom = new LinkedList<>();
-      while(!queue.isEmpty())
-      {
-        int i = queue.peek().first;
-        int j = queue.peek().second;
-        sum+=matrix[i][j];
-        cnt++;
-        visitedMatrix[i][j] = 1;
-        queue.poll();
-        if(i+1<30 && matrix[i+1][j]!=0 && visitedMatrix[i+1][j]==0)
-        {
-          pom.add(new Pair<>(i+1,j));
-        }
-        if(i-1>=0 && matrix[i-1][j]!=0 && visitedMatrix[i-1][j]==0)
-        {
-          pom.add(new Pair<>(i-1,j));
-        }
-        if(j+1<30 && matrix[i][j+1]!=0 && visitedMatrix[i][j+1]==0)
-        {
-          pom.add(new Pair<>(i,j+1));
-        }
-        if(j-1>=0 && matrix[i][j-1]!=0 && visitedMatrix[i][j-1]==0)
-        {
-          pom.add(new Pair<>(i,j-1));
-        }
-      }
-      queue=pom;
-    }
-
-    double average = sum/cnt;
-
-    queue.add(new Pair<>(x,y));
-
-    while(!queue.isEmpty())
-    {
-      Queue<Pair<Integer,Integer>> pom = new LinkedList<>();
-      while(!queue.isEmpty())
-      {
-        int i = queue.peek().first;
-        int j = queue.peek().second;
-        averageGridMatrix[i][j] = average;
-        visitedMatrix[i][j]=2;
-        queue.poll();
-
-        if(i+1<30 && matrix[i+1][j]!=0 && visitedMatrix[i+1][j]==1)
-        {
-          pom.add(new Pair<>(i+1,j));
-        }
-        if(i-1>=0 && matrix[i-1][j]!=0 && visitedMatrix[i-1][j]==1)
-        {
-          pom.add(new Pair<>(i-1,j));
-        }
-        if(j+1<30 && matrix[i][j+1]!=0 && visitedMatrix[i][j+1]==1)
-        {
-          pom.add(new Pair<>(i,j+1));
-        }
-        if(j-1>=0 && matrix[i][j-1]!=0 && visitedMatrix[i][j-1]==1)
-        {
-          pom.add(new Pair<>(i,j-1));
-        }
-      }
-      queue=pom;
-    }
-
-  }
-
   public static class TwoMatricesResponse {
     private int[][] matrix1;
     private double[][] matrix2;
 
-    public TwoMatricesResponse(int[][] matrix1, double[][] matrix2) {
+    private double max ;
+
+    public TwoMatricesResponse(int[][] matrix1, double[][] matrix2,double max) {
       this.matrix1 = matrix1;
       this.matrix2 = matrix2;
+      this.max = max;
     }
 
     public int[][] getMatrix1() {
@@ -151,6 +130,10 @@ public class GridController {
 
     public double[][] getMatrix2() {
       return matrix2;
+    }
+
+    public double getMax() {
+      return max;
     }
   }
 
